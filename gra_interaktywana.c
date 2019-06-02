@@ -12,6 +12,7 @@ int IloscGraczy;
 char ListaGraczy[9][20];
 int RybyGraczy[9]= {0,0,0,0,0,0,0,0,0};
 int iloscPingwinow;
+
 POLE **pobierzZPliku(int *m, int *n)
 {
     printf("Podaj nazwe pliku, w ktorym jest plansza. ");
@@ -326,6 +327,7 @@ int main()
     POLE **WskaznikNaPlansze=pobierzZPliku(&m,&n);
     pobierzgraczyiryby(WskaznikNaPlansze);
     drukujPlansze(WskaznikNaPlansze,m,n);
+
     rozgrywka(WskaznikNaPlansze);
     return 0;
 }

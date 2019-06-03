@@ -2,33 +2,17 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
+#include <math.h>
+#include <time.h>
 
-#define INTERAKTYWNA 1
+#include "templates.h"
 
-typedef struct {
-    int ileRyb;
-    int nrGracza;
-} POLE;
-
-
-typedef struct {
-    POLE **pole;
-    int n_rows;
-    int n_cols;
-    int IloscGraczy;
-    int ilosc_ryb;
-    int ilosc_pingwinow;
-    int nr_gracza;
-    char *imie_gracza;
-} Plansza;
-
-int IloscGraczy;
-char ListaGraczy[9][20];
-int RybyGraczy[9]= {0,0,0,0,0,0,0,0,0};
-int iloscPingwinow;
-
-void print_plansze(Plansza plansza)
+void print_game_info(Plansza plansza, GameParameters params)
 {
+    printf("faza gry: %s\nn_pingwinow: %d\ninputFile: %s\noutputFile: %s\n", \
+        params.phase ? "movement":"placement", params.penguins, params.inputboardfile, params.outputboardfile);
+    printf("zebrane ryby: %d\n", plansza.ilosc_ryb);
     printf("\n    ");
     for(int i=0; i<plansza.n_cols; i++)
     {
@@ -48,23 +32,19 @@ void print_plansze(Plansza plansza)
     }
 }
 
-Plansza read_file(FILE *fp)
+int read_file(FILE *fp_in, Plansza *plansza, GameParameters params)
 {
     int n_rows, n_cols;
-    fscanf(fp,"%d", &n_rows);
-    fscanf(fp,"%d", &n_cols);
+    fscanf(fp_in,"%d", &n_rows);
+    fscanf(fp_in,"%d", &n_cols);
 
-    Plansza plansza;
-    printf("ok\n");
-    plansza.n_rows = n_rows;
-    plansza.n_cols = n_cols;
-    printf("ok\n");
-    plansza.pole = malloc(n_rows*sizeof(POLE *));
+    plansza->n_rows = n_rows;
+    plansza->n_cols = n_cols;
+    plansza->pole = malloc(n_rows*sizeof(POLE *));
     for(int i=0; i<n_rows; i++)
     {
-        plansza.pole[i]=malloc(n_cols*sizeof(POLE));
+        plansza->pole[i]=malloc(n_cols*sizeof(POLE));
     }
-    printf("ok\n");
     for(int i=0; i<n_rows; i++)
     {
         for(int j=0; j<n_cols; j++)
@@ -72,30 +52,69 @@ Plansza read_file(FILE *fp)
             char a;
             do
             {
-                a=fgetc(fp);
+                a=fgetc(fp_in);
                 if(a>='0' && a<='3')
                 {
-                    plansza.pole[i][j].ileRyb=a-'0';
+                    plansza->pole[i][j].ileRyb=a-'0';
                 }
             }
             while((a==' ' || a=='\n'));
             do
             {
-                a=fgetc(fp);
+                a=fgetc(fp_in);
                 if(a>='0' && a<='9')
-                    plansza.pole[i][j].nrGracza=a-'0';
+                    plansza->pole[i][j].nrGracza=a-'0';
                 else
                 {
                     printf("Blad wewnetrzny pliku!\n");
-                    exit(3);
+                    return -2;
                 }
             }
             while((a==' ' || a=='\n'));
         }
     }
-    return plansza;
+    char player_name[20];
+    int n_ryb, nr_gracza;
+    players_stats_type player;
+    int myidx = 0;
+    int i=0;
+    while(fscanf(fp_in, "%s %d %d", player_name, &nr_gracza, &n_ryb) != EOF)
+    {        
+        player.n_ryb = n_ryb;
+        player.nr_gracza = nr_gracza;
+        plansza->players_stats[i] = player;
+        strcpy(plansza->players_stats[i].name, player_name);
+        if(strcmp(player_name, TEAM_NAME) == 0)
+            myidx = i;  // index of our team name
+        i++;
+    }
+    if(params.phase == movement)
+    {
+        plansza->n_players = i;
+        plansza->ilosc_ryb = plansza->players_stats[myidx].n_ryb;
+    }
+    return 0;
 }
-
+int save_to_file(FILE *fp_in, FILE *fp_out, Plansza *plansza, GameParameters params)
+{
+    fprintf(fp_out,"%d %d\n",plansza->n_rows, plansza->n_cols);
+    for(int i=0; i<plansza->n_rows; i++)
+    {
+        for(int j=0; j<plansza->n_cols; j++)
+        {
+            fprintf(fp_out,"%d%d ",plansza->pole[i][j].ileRyb, plansza->pole[i][j].nrGracza);
+        }
+        fprintf(fp_out,"\n");
+    }
+    for(int i=0; i<plansza->n_players; i++)
+    {
+        char *name = plansza->players_stats[i].name;
+        int n_ryb = plansza->players_stats[i].n_ryb;
+        int nr_gracza = plansza->players_stats[i].nr_gracza;
+        fprintf(fp_out, "%s %d %d\n", name, nr_gracza, n_ryb);
+    }
+    return 0;
+}
 int split(char *arg, char *value)
 {
     if(!arg)
@@ -120,18 +139,6 @@ int split(char *arg, char *value)
     return 0;
 }
 
-typedef enum p{
-    placement = 0, movement = 1
-} phase_type;
-
-typedef struct game_params {
-    POLE ** WskaznikNaPlansze;
-    phase_type phase;
-    int penguins;
-    char inputboardfile[40];
-    char outputboardfile[40];
-}GameParameters;
-
 int get_params(int argc, char **argv, GameParameters *params)
 {
     phase_type phase;
@@ -143,9 +150,10 @@ int get_params(int argc, char **argv, GameParameters *params)
     {
         char *arg = argv[i];
         char value[40];
-        if(!split(arg, value))
+        if(split(arg, value) != 0)
         {
-            strcmp(value, "ale");
+            printf("error in split function\n");
+            return 3;
         }
         if(!strcmp(arg, "phase"))
         {
@@ -156,7 +164,6 @@ int get_params(int argc, char **argv, GameParameters *params)
         }
         else if(!strcmp(arg, "penguins"))
         {
-            printf("penguins set\n");
             sscanf(value, "%d", &penguins);
         }
         else if(!strcmp(arg, "inputboardfile"))
@@ -176,35 +183,71 @@ int get_params(int argc, char **argv, GameParameters *params)
     return 0;
 }
 
+/**
+ * ustawia pingwina na zadanym polu
+ * zwraca 
+ *  0->ok
+ *  2->nie mam wiecej pingwinow
+ *  1->na tym polu nie mozna ustawic pingwina
+*/
+int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
+{
+    assert(params.phase == placement);
+    if(params.penguins <= plansza->ilosc_ryb)
+    {
+        printf("nie zgadza sie liczba ryb do liczby pingwinow przy rozstawianiu!\n");
+        return 2;
+    }
+    if(plansza->pole[x][y].nrGracza!=0 || plansza->pole[x][y].ileRyb!=1)
+        {
+            printf("Na tym polu nie mozna ustawic pingwina!\n");
+            return 1;
+        }
+        else
+        {
+            plansza->pole[x][y].nrGracza=TEAM_NR;
+            plansza->ilosc_ryb += plansza->pole[x][y].ileRyb;
+            plansza->pole[x][y].ileRyb=0;
+        }
+        return 0;
+}
+
 
 int main(int argc, char **argv)
 {
     GameParameters params;
     Plansza plansza;
     if(get_params(argc, argv, &params) != 0)
-        return -3;
-    printf("phase : %d\n", params.phase);
-    printf("penguins = %d\n", params.penguins);
-    printf("inputboardfile = %s\n", params.inputboardfile);
-    printf("outputboardfile = %s\n", params.outputboardfile);
-    FILE *fp = fopen(params.inputboardfile, "r");
-    if(!fp)
+        return 3;
+    FILE *fp_in = fopen(params.inputboardfile, "rt");
+    if(!fp_in)
     {
         printf("\nerror while opening a file\n");
-        return -2; 
+        return 2; 
     }
         
     switch (params.phase)
     {
         case placement:
         {
-            plansza = read_file(fp);
+            int read_result = read_file(fp_in, &plansza, params);
+            if(read_result != 0)
+                return read_result;
             if(plansza.pole == NULL)
                 printf("pole = NULL\n");
-            printf("n_rows = %d\nn_cols = %d\n", plansza.n_rows, plansza.n_cols);
-            print_plansze(plansza);
-
-            //ustaw_pingwina(plansza, int x, int y);
+            print_game_info(plansza, params);
+            srand(time(NULL));
+            int x;
+            int y;
+            int result;
+            do
+            {
+                x = rand()%plansza.n_rows;
+                y = rand()%plansza.n_cols;
+                result = ustaw_pingwina(&plansza, params, x, y);
+                if(result == 2)
+                    break;
+            } while (result != 0);
             //
         } break;
 
@@ -215,5 +258,9 @@ int main(int argc, char **argv)
         } break;
 
     }
+    FILE *fp_out = fopen(params.outputboardfile, "wt");
+    save_to_file(fp_in, fp_out, &plansza, params);
+    fclose(fp_in);
+    fclose(fp_out);
     return 0;
 }

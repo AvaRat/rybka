@@ -73,7 +73,7 @@ void zapiszdopliku(POLE **WskaznikNaPlansze, int m, int n)
     {
         for(int j=0; j<n; j++)
         {
-            fprintf(plik,"%d%d ",WskaznikNaPlansze[i][j].ileRyb,WskaznikNaPlansze[i][j].nrGracza);
+            fprintf(plik,"%d%d ",WskaznikNaPlansze[i][j].ileRyb, WskaznikNaPlansze[i][j].nrGracza);
         }
         fprintf(plik,"\n");
     }

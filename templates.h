@@ -29,7 +29,7 @@ typedef struct {
     POLE **pole;
     int n_rows;
     int n_cols;
-    int ilosc_ryb;
+    int nasza_ilosc_ryb;
     int n_players;
     players_stats_type players_stats[9];
 } Plansza;

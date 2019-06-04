@@ -12,7 +12,7 @@ void print_game_info(Plansza plansza, GameParameters params)
 {
     printf("faza gry: %s\nn_pingwinow: %d\ninputFile: %s\noutputFile: %s\n", \
         params.phase ? "movement":"placement", params.penguins, params.inputboardfile, params.outputboardfile);
-    printf("zebrane ryby: %d\n", plansza.ilosc_ryb);
+    printf("zebrane ryby: %d\n", plansza.nasza_ilosc_ryb);
     printf("\n    ");
     for(int i=0; i<plansza.n_cols; i++)
     {
@@ -76,7 +76,7 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters params)
     char player_name[20];
     int n_ryb, nr_gracza;
     players_stats_type player;
-    int myidx = 0;
+    int myidx = -1;
     int i=0;
     while(fscanf(fp_in, "%s %d %d", player_name, &nr_gracza, &n_ryb) != EOF)
     {        
@@ -88,11 +88,23 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters params)
             myidx = i;  // index of our team name
         i++;
     }
+    if(i == 0 || myidx < 0)  //nie ma jeszcze zadnych graczy, lub naszego teamu wpisanego na koncu pliku
+    {
+        // pierwsze uruchomienie naszego programu
+        i++;
+        plansza->nasza_ilosc_ryb = 0;
+        plansza->players_stats[0].nr_gracza = TEAM_NR;
+        plansza->players_stats[0].n_ryb = 0;
+        strcpy(plansza->players_stats[0].name, TEAM_NAME);
+        myidx = 0;  //zeby potem przypisac ilosc ryb do plansza->nasza_ilosc_ryb
+    }
     if(params.phase == movement)
     {
         plansza->n_players = i;
-        plansza->ilosc_ryb = plansza->players_stats[myidx].n_ryb;
+        plansza->nasza_ilosc_ryb = plansza->players_stats[myidx].n_ryb;
     }
+    plansza->n_players = i;
+    plansza->nasza_ilosc_ryb = plansza->players_stats[myidx].n_ryb;
     return 0;
 }
 int save_to_file(FILE *fp_in, FILE *fp_out, Plansza *plansza, GameParameters params)
@@ -106,6 +118,7 @@ int save_to_file(FILE *fp_in, FILE *fp_out, Plansza *plansza, GameParameters par
         }
         fprintf(fp_out,"\n");
     }
+    //zapisz statystyki graczy
     for(int i=0; i<plansza->n_players; i++)
     {
         char *name = plansza->players_stats[i].name;
@@ -193,7 +206,7 @@ int get_params(int argc, char **argv, GameParameters *params)
 int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
 {
     assert(params.phase == placement);
-    if(params.penguins <= plansza->ilosc_ryb)
+    if(params.penguins <= plansza->nasza_ilosc_ryb)
     {
         printf("nie zgadza sie liczba ryb do liczby pingwinow przy rozstawianiu!\n");
         return 2;
@@ -206,7 +219,7 @@ int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
         else
         {
             plansza->pole[x][y].nrGracza=TEAM_NR;
-            plansza->ilosc_ryb += plansza->pole[x][y].ileRyb;
+            plansza->nasza_ilosc_ryb += plansza->pole[x][y].ileRyb;
             plansza->pole[x][y].ileRyb=0;
         }
         return 0;
@@ -247,6 +260,8 @@ int main(int argc, char **argv)
                 result = ustaw_pingwina(&plansza, params, x, y);
                 if(result == 2)
                     break;
+                else if(result==0)
+                    printf("pingwin ustawiony\n");
             } while (result != 0);
             //
         } break;

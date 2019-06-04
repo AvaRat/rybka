@@ -101,19 +101,20 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters *params)
         i++;
     }
     printf("ok\n");
-    if(i == 0 || myidx < 0)  //nie ma jeszcze zadnych graczy, lub naszego teamu wpisanego na koncu pliku
+    if(i == 0 || myidx < 0)  //nie ma jeszcze zadnych graczy
     {
         assert(params->phase == placement);
         // pierwsze uruchomienie naszego programu
         plansza->players_stats[i].nr_gracza = i+1;
         plansza->players_stats[i].n_ryb = 0;
         strcpy(plansza->players_stats[i].name, TEAM_NAME);
+        if(myidx < 0)
+            myidx = i;
+        else myidx = 0;
         i++;
-        myidx = i;  //zeby potem przypisac ilosc ryb do plansza->nasza_ilosc_ryb
-
     }
     params->n_players = i;
-    plansza->nasz_nr = myidx;;
+    plansza->nasz_nr = myidx+1;
     plansza->nasza_ilosc_ryb = &(plansza->players_stats[myidx].n_ryb);
     return 0;
 }
@@ -224,17 +225,16 @@ int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
         return 1;
     }
     if(plansza->pole[x][y].nrGracza!=0 || plansza->pole[x][y].ileRyb!=1)
-        {
+    {
             printf("Na tym polu nie mozna ustawic pingwina!\n");
             return -1;
-        }
-        else
-        {
-            plansza->pole[x][y].nrGracza=TEAM_NR;
-            *(plansza->nasza_ilosc_ryb) += plansza->pole[x][y].ileRyb;
-            plansza->pole[x][y].ileRyb=0;
-        }
-        return 0;
+    } else
+    {
+        plansza->pole[x][y].nrGracza=TEAM_NR;
+        *(plansza->nasza_ilosc_ryb) += plansza->pole[x][y].ileRyb;
+        plansza->pole[x][y].ileRyb=0;
+    }
+    return 0;
 }
 
 void exit_program(int exit_code)
@@ -304,6 +304,7 @@ int main(int argc, char **argv)
                 else if(exit_code==0)
                     printf("pingwin ustawiony\n");
             }
+          //  print_game_info(plansza, params);
             //
         } break;
 

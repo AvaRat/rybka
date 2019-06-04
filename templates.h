@@ -21,6 +21,7 @@ typedef struct {
 typedef struct game_params {
     phase_type phase;
     int penguins;
+    int n_players;
     char inputboardfile[40];
     char outputboardfile[40];
 }GameParameters;
@@ -29,8 +30,8 @@ typedef struct {
     POLE **pole;
     int n_rows;
     int n_cols;
-    int nasza_ilosc_ryb;
-    int n_players;
+    int nasz_nr;
+    int *nasza_ilosc_ryb;   // wskaznik na naszego gracza w strukturze player_stats
     players_stats_type players_stats[9];
 } Plansza;
 

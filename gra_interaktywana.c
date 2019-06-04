@@ -140,6 +140,7 @@ powtoreczka:
         }
     }
 }
+
 void RuszPingwina(int x,int y,POLE **WskaznikNaPlansze,int obecnyGracz)
 {
     printf("Obecny gracz %d \n",obecnyGracz);

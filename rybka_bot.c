@@ -8,11 +8,20 @@
 
 #include "templates.h"
 
+void clear_memory(Plansza *plansza)
+{
+    printf("czyszczenie pamieci i zamykanie plikow\n");
+    for(int i=0; i<plansza->n_rows; i++)
+    {
+        free(plansza->pole[i]);
+    }
+    free(plansza->pole);
+}
 void print_game_info(Plansza plansza, GameParameters params)
 {
-    printf("faza gry: %s\nn_pingwinow: %d\ninputFile: %s\noutputFile: %s\n", \
+    printf("\nfaza gry: %s\nn_pingwinow: %d\ninputFile: %s\noutputFile: %s\n", \
         params.phase ? "movement":"placement", params.penguins, params.inputboardfile, params.outputboardfile);
-    printf("zebrane ryby: %d\n", plansza.nasza_ilosc_ryb);
+    printf("liczba_graczy: %d\nzebrane ryby: %d\n", params.n_players, *plansza.nasza_ilosc_ryb);
     printf("\n    ");
     for(int i=0; i<plansza.n_cols; i++)
     {
@@ -32,7 +41,7 @@ void print_game_info(Plansza plansza, GameParameters params)
     }
 }
 
-int read_file(FILE *fp_in, Plansza *plansza, GameParameters params)
+int read_file(FILE *fp_in, Plansza *plansza, GameParameters *params)
 {
     int n_rows, n_cols;
     fscanf(fp_in,"%d", &n_rows);
@@ -40,11 +49,13 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters params)
 
     plansza->n_rows = n_rows;
     plansza->n_cols = n_cols;
+    printf("alokowanie pamieci ...\t");
     plansza->pole = malloc(n_rows*sizeof(POLE *));
     for(int i=0; i<n_rows; i++)
     {
         plansza->pole[i]=malloc(n_cols*sizeof(POLE));
     }
+    printf("ok\n");
     for(int i=0; i<n_rows; i++)
     {
         for(int j=0; j<n_cols; j++)
@@ -78,6 +89,7 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters params)
     players_stats_type player;
     int myidx = -1;
     int i=0;
+    printf("pobieranie statystyk graczy ...\t");
     while(fscanf(fp_in, "%s %d %d", player_name, &nr_gracza, &n_ryb) != EOF)
     {        
         player.n_ryb = n_ryb;
@@ -88,27 +100,26 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters params)
             myidx = i;  // index of our team name
         i++;
     }
+    printf("ok\n");
     if(i == 0 || myidx < 0)  //nie ma jeszcze zadnych graczy, lub naszego teamu wpisanego na koncu pliku
     {
+        assert(params->phase == placement);
         // pierwsze uruchomienie naszego programu
+        plansza->players_stats[i].nr_gracza = i+1;
+        plansza->players_stats[i].n_ryb = 0;
+        strcpy(plansza->players_stats[i].name, TEAM_NAME);
         i++;
-        plansza->nasza_ilosc_ryb = 0;
-        plansza->players_stats[0].nr_gracza = TEAM_NR;
-        plansza->players_stats[0].n_ryb = 0;
-        strcpy(plansza->players_stats[0].name, TEAM_NAME);
-        myidx = 0;  //zeby potem przypisac ilosc ryb do plansza->nasza_ilosc_ryb
+        myidx = i;  //zeby potem przypisac ilosc ryb do plansza->nasza_ilosc_ryb
+
     }
-    if(params.phase == movement)
-    {
-        plansza->n_players = i;
-        plansza->nasza_ilosc_ryb = plansza->players_stats[myidx].n_ryb;
-    }
-    plansza->n_players = i;
-    plansza->nasza_ilosc_ryb = plansza->players_stats[myidx].n_ryb;
+    params->n_players = i;
+    plansza->nasz_nr = myidx;;
+    plansza->nasza_ilosc_ryb = &(plansza->players_stats[myidx].n_ryb);
     return 0;
 }
 int save_to_file(FILE *fp_in, FILE *fp_out, Plansza *plansza, GameParameters params)
 {
+    printf("zapisywanie do pliku ...\t");
     fprintf(fp_out,"%d %d\n",plansza->n_rows, plansza->n_cols);
     for(int i=0; i<plansza->n_rows; i++)
     {
@@ -118,14 +129,16 @@ int save_to_file(FILE *fp_in, FILE *fp_out, Plansza *plansza, GameParameters par
         }
         fprintf(fp_out,"\n");
     }
+    printf("ok\nzapisywanie statystyk ...\t");
     //zapisz statystyki graczy
-    for(int i=0; i<plansza->n_players; i++)
+    for(int i=0; i<params.n_players; i++)
     {
         char *name = plansza->players_stats[i].name;
         int n_ryb = plansza->players_stats[i].n_ryb;
         int nr_gracza = plansza->players_stats[i].nr_gracza;
         fprintf(fp_out, "%s %d %d\n", name, nr_gracza, n_ryb);
     }
+    printf("ok\n");
     return 0;
 }
 int split(char *arg, char *value)
@@ -136,7 +149,6 @@ int split(char *arg, char *value)
     char ch;
     int len = 0;
     int loc = 0;
-    int max_len = strlen(arg);
     for(len=0, ch=arg[0]; ch != '\0'; ch=arg[len++])
     {
         if(ch == '\0')
@@ -206,23 +218,48 @@ int get_params(int argc, char **argv, GameParameters *params)
 int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
 {
     assert(params.phase == placement);
-    if(params.penguins <= plansza->nasza_ilosc_ryb)
+    if(params.penguins <= *plansza->nasza_ilosc_ryb)
     {
-        printf("nie zgadza sie liczba ryb do liczby pingwinow przy rozstawianiu!\n");
-        return 2;
+        printf("nie mam juz zadnych pingwinow do rozlozenia\n");
+        return 1;
     }
     if(plansza->pole[x][y].nrGracza!=0 || plansza->pole[x][y].ileRyb!=1)
         {
             printf("Na tym polu nie mozna ustawic pingwina!\n");
-            return 1;
+            return -1;
         }
         else
         {
             plansza->pole[x][y].nrGracza=TEAM_NR;
-            plansza->nasza_ilosc_ryb += plansza->pole[x][y].ileRyb;
+            *(plansza->nasza_ilosc_ryb) += plansza->pole[x][y].ileRyb;
             plansza->pole[x][y].ileRyb=0;
         }
         return 0;
+}
+
+void exit_program(int exit_code)
+{
+    if(exit_code == 3)
+    {
+        printf("blad wewnetrzny programu\n");
+    }
+    else if(exit_code == 2)
+    {
+        printf("blad danych wejsciowych\n");
+    }
+    else if(exit_code == 1)
+    {
+        printf("nie moge wykonac ruchu, ale wszystko jest OK\n");
+    }
+    else if(exit_code == 0)
+    {
+        printf("wszystko ok\n");
+    }
+    else
+    {
+        printf("nieznany kod\n");
+    }
+    
 }
 
 
@@ -230,6 +267,7 @@ int main(int argc, char **argv)
 {
     GameParameters params;
     Plansza plansza;
+    int exit_code = 0;
     if(get_params(argc, argv, &params) != 0)
         return 3;
     FILE *fp_in = fopen(params.inputboardfile, "rt");
@@ -243,26 +281,29 @@ int main(int argc, char **argv)
     {
         case placement:
         {
-            int read_result = read_file(fp_in, &plansza, params);
-            if(read_result != 0)
-                return read_result;
-            if(plansza.pole == NULL)
-                printf("pole = NULL\n");
+            exit_code = read_file(fp_in, &plansza, &params);
+            if(exit_code != 0)
+            {
+                exit_program(exit_code);
+                clear_memory(&plansza);
+                fclose(fp_in);
+                return exit_code;
+            }
+            assert(plansza.pole != NULL);
             print_game_info(plansza, params);
             srand(time(NULL));
             int x;
             int y;
-            int result;
-            do
+            for(exit_code=2; exit_code != 0;)
             {
                 x = rand()%plansza.n_rows;
                 y = rand()%plansza.n_cols;
-                result = ustaw_pingwina(&plansza, params, x, y);
-                if(result == 2)
+                exit_code = ustaw_pingwina(&plansza, params, x, y);
+                if(exit_code == 1)
                     break;
-                else if(result==0)
+                else if(exit_code==0)
                     printf("pingwin ustawiony\n");
-            } while (result != 0);
+            }
             //
         } break;
 
@@ -277,5 +318,7 @@ int main(int argc, char **argv)
     save_to_file(fp_in, fp_out, &plansza, params);
     fclose(fp_in);
     fclose(fp_out);
-    return 0;
+    clear_memory(&plansza);
+    printf("\n\texit_code: %d\n", exit_code);
+    return exit_code;
 }

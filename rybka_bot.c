@@ -21,7 +21,7 @@ void print_game_info(Plansza plansza, GameParameters params)
 {
     printf("\nfaza gry: %s\nn_pingwinow: %d\ninputFile: %s\noutputFile: %s\n", \
         params.phase ? "movement":"placement", params.penguins, params.inputboardfile, params.outputboardfile);
-    printf("liczba_graczy: %d\nzebrane ryby: %d\n", params.n_players, *plansza.nasza_ilosc_ryb);
+    printf("liczba_graczy: %d\nzebrane ryby: %d\nnasz_nr: %d\n", params.n_players, *plansza.nasza_ilosc_ryb, plansza.nasz_nr);
     printf("\n    ");
     for(int i=0; i<plansza.n_cols; i++)
     {
@@ -100,7 +100,7 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters *params)
             myidx = i;  // index of our team name
         i++;
     }
-    printf("ok\n");
+
     if(i == 0 || myidx < 0)  //nie ma jeszcze zadnych graczy
     {
         assert(params->phase == placement);
@@ -116,6 +116,7 @@ int read_file(FILE *fp_in, Plansza *plansza, GameParameters *params)
     params->n_players = i;
     plansza->nasz_nr = myidx+1;
     plansza->nasza_ilosc_ryb = &(plansza->players_stats[myidx].n_ryb);
+    printf("ok\n");
     return 0;
 }
 int save_to_file(FILE *fp_in, FILE *fp_out, Plansza *plansza, GameParameters params)
@@ -236,6 +237,127 @@ int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
     }
     return 0;
 }
+/**
+ *zwraca
+ *  0->ok
+ *  1->nie mozna tam isc
+ * 
+*/ 
+int move_penguins(Plansza *plansza, GameParameters params, Wspolrzedne_pola pingwin, Wspolrzedne_pola ruch)
+{
+    int x = pingwin.row;
+    int y = pingwin.column;
+    int z = ruch.row;
+    int t = ruch.column;
+    assert(params.phase == movement);
+    if(x == z && y>=t)
+    {
+        for(int i=1; i<=y-t; i++)
+        {
+            if(y-i<0)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+            if(plansza->pole[x][y-i].ileRyb==0 || plansza->pole[x][y-i].nrGracza!=0 || y-i<0)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+        }
+        plansza->pole[x][t].nrGracza=TEAM_NR;
+        plansza->pole[x][y].nrGracza=0;
+        plansza->nasza_ilosc_ryb+= plansza->pole[x][t].ileRyb;
+        plansza->pole[x][t].ileRyb=0;
+        return 0;
+    }
+    else if(x==z && y<=t)
+    {
+        for(int i=1; i<=t-y; i++)
+        {
+            if(y+i>=plansza->n_cols-1)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+            if(plansza->pole[x][y+i].ileRyb==0 || plansza->pole[x][y+i].nrGracza!=0)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+        }
+        plansza->pole[x][t].nrGracza=TEAM_NR;
+        plansza->pole[x][y].nrGracza=0;
+        plansza->nasza_ilosc_ryb+= plansza->pole[x][t].ileRyb;
+        plansza->pole[x][t].ileRyb=0;
+        return 0;
+    }
+    else if(z<=x && y==t)
+    {
+        for(int i=1; i<=x-z; i++)
+        {
+            if(x-i<0)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+            if(plansza->pole[x-i][y].ileRyb==0 || plansza->pole[x-i][y].nrGracza!=0 || x-i<0)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+        }
+        plansza->pole[z][y].nrGracza=TEAM_NR;
+        plansza->pole[x][y].nrGracza=0;
+        plansza->nasza_ilosc_ryb+= plansza->pole[z][y].ileRyb;
+        plansza->pole[z][y].ileRyb=0;
+        return 0;
+    }
+    else if(z>=x && y==t)
+    {
+        for(int i=1; i<=z-x; i++)
+        {
+            if(x+i>plansza->n_rows)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+            if(plansza->pole[x+i][y].ileRyb==0 || plansza->pole[x+i][y].nrGracza!=0 || x+i>plansza->n_rows)
+            {
+                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
+                return 1;
+            }
+        }
+        plansza->pole[z][y].nrGracza=TEAM_NR;
+        plansza->pole[x][y].nrGracza=0;
+        plansza->nasza_ilosc_ryb+= plansza->pole[z][y].ileRyb;
+        plansza->pole[z][y].ileRyb=0;
+        return 0;
+    }
+    return 1;
+}
+int znajdz_nasze_pingwiny(Plansza *plansza, GameParameters params)
+{
+    printf("znajdywanie naszych pingwinow: ...\t");
+    assert(params.phase==movement && plansza != NULL);
+    
+    int i=0;
+    plansza->nasze_pingwiny = malloc(sizeof(Wspolrzedne_pola) *params.penguins);
+    for(int r=0; r<plansza->n_rows; r++)
+    {
+        for(int c=0; c<plansza->n_cols; c++)
+        {
+            if(plansza->pole[r][c].nrGracza == plansza->nasz_nr)
+            {
+                plansza->nasze_pingwiny[i].row = r;
+                plansza->nasze_pingwiny[i++].column = c;
+            }
+        }
+    }
+    assert(i == params.penguins);
+    printf("ok\n");
+    return 0;
+}
 
 void exit_program(int exit_code)
 {
@@ -310,8 +432,32 @@ int main(int argc, char **argv)
 
         case movement:
         {
-            // wybierz pingwina, jeśli nie mozesz się ruszyć return 1
-            //RuszPingwina
+            exit_code = read_file(fp_in, &plansza, &params);
+            if(exit_code != 0)
+            {
+                exit_program(exit_code);
+                clear_memory(&plansza);
+                fclose(fp_in);
+                return exit_code;
+            }
+            znajdz_nasze_pingwiny(&plansza, params);
+            for(int i=0; i<params.penguins; i++)
+                printf("(x,y) : (%d,%d)\n", \
+                plansza.nasze_pingwiny[i].row, plansza.nasze_pingwiny[i].column);
+            int x, y, t;
+            t = rand()%params.penguins; //losuj nr naszego pingwina
+            Wspolrzedne_pola nasz_pingwin = plansza.nasze_pingwiny[t];
+            Wspolrzedne_pola ruch;
+            for(exit_code=1; exit_code != 0;)
+            {
+                x = rand()%plansza.n_rows;
+                y = rand()%plansza.n_cols;
+                ruch.row = x;
+                ruch.column = y;
+                exit_code = move_penguins(&plansza, params, nasz_pingwin, ruch);
+                if(exit_code==0)
+                    printf("pingwin ruszony\n");
+            }
         } break;
 
     }

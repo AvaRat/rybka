@@ -1,4 +1,4 @@
-CFLAGS = -Wall # tutaj można dodawać inne flagi kompilatora
+CFLAGS = -Wall -pedantic -std=c11 # tutaj można dodawać inne flagi kompilatora
 LIBS = -lm # tutaj można dodawać biblioteki
 PHASE=placement
 INPUTBOARDFILE=board01.txt

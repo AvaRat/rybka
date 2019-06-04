@@ -7,6 +7,10 @@ typedef struct {
     int nrGracza;
 } POLE;
 
+typedef struct {
+    int row;
+    int column;
+} Wspolrzedne_pola;
 
 typedef enum p{
     placement = 0, movement = 1
@@ -31,6 +35,7 @@ typedef struct {
     int n_rows;
     int n_cols;
     int nasz_nr;
+    Wspolrzedne_pola *nasze_pingwiny;
     int *nasza_ilosc_ryb;   // wskaznik na naszego gracza w strukturze player_stats
     players_stats_type players_stats[9];
 } Plansza;

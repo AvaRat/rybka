@@ -1,5 +1,4 @@
 #define INTERAKTYWNA 1
-#define TEAM_NR 1
 #define TEAM_NAME "marcel"
 
 typedef struct {
@@ -11,6 +10,13 @@ typedef struct {
     int row;
     int column;
 } Wspolrzedne_pola;
+
+
+typedef struct {
+    int potencjal;
+    int max_ryb;
+    Wspolrzedne_pola pole;
+} analizator_pingwinow;
 
 typedef enum p{
     placement = 0, movement = 1

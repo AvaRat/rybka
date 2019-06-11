@@ -3,7 +3,7 @@ LIBS = -lm # tutaj można dodawać biblioteki
 PHASE=movement
 INPUTBOARDFILE=board01.txt
 OUTPUTBOARDFILE=board01.txt
-PENGUINS=12
+PENGUINS=5
 
 OBJ =\
   rybka_bot.o

@@ -16,6 +16,7 @@ void clear_memory(Plansza *plansza)
         free(plansza->pole[i]);
     }
     free(plansza->pole);
+    free(plansza->nasze_pingwiny);
 }
 void print_game_info(Plansza plansza, GameParameters params)
 {
@@ -416,6 +417,7 @@ Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters pa
         Wspolrzedne_pola error = {-1, -1};
         return error;
     }
+    free(analizator);
  //   printf("pol z max ryb: (%d, %d)\n", pole_max_prior.row, pole_max_ryb.column);
   //  printf("pole z max potencjal: (%d, %d) \n", pole_max_prior.row, pole_max_prior.column);
     if(szukanie == PO_LICZBIE_RYB)    

@@ -376,36 +376,16 @@ analizator_pingwinow* analize_array_of_points(Plansza *plansza, Wspolrzedne_pola
     {
         analizator[i] = analyze_point(plansza, punkty[i]);
     }
-    int max_prior = -1;
-    int max_ryb = -1;
-    for(int i=0; i<n_points; i++)
-    {
-     //   printf("pot: %d max_ryb: %d ileRyb: %d",analizator[i].potencjal, analizator[i].max_ryb, analizator[i].ileRyb);
-      //  print_pole(analizator[i].pole, " pole");
-        if(analizator[i].max_ryb > max_ryb || analizator[i].potencjal > max_prior)
-        {
-            max_prior = 1;
-            max_ryb = 1;
-        }
-    }
-    if(max_prior < 0 && max_ryb < 0)
-        return NULL;
-    else
-        return analizator;
+    return analizator;
 }
 Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters params, typ_szukania szukanie)
 {
     int n_penguins = params.penguins;
     analizator_pingwinow *analizator =  analize_array_of_points(plansza, plansza->nasze_pingwiny, n_penguins);
-    if(analizator == NULL)
-    {
-        Wspolrzedne_pola error = {-1, -1};
-        return error;
-    }
     int max_ryb = -1;
     int max_prior = -1;
-    Wspolrzedne_pola pole_max_ryb;
-    Wspolrzedne_pola pole_max_prior;
+    Wspolrzedne_pola pole_max_ryb = {-1, -1};
+    Wspolrzedne_pola pole_max_prior = {-1, -1};
     for(int i=0; i<n_penguins; i++)
     {
         if(analizator[i].max_ryb > max_ryb)
@@ -420,6 +400,12 @@ Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters pa
         }
      //   printf("potencjal: %d, wspolrzedne: (%d, %d)\n", analizator[i].potencjal, 
       //          analizator[i].pole.row, analizator[i].pole.column);
+    }
+    printf("max potencjal: %d\nmax_n_ryb: %d\n", max_prior, max_ryb);
+    if(max_prior == -1)
+    {
+        Wspolrzedne_pola error = {-1, -1};
+        return error;
     }
  //   printf("pol z max ryb: (%d, %d)\n", pole_max_prior.row, pole_max_ryb.column);
   //  printf("pole z max potencjal: (%d, %d) \n", pole_max_prior.row, pole_max_prior.column);

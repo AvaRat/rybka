@@ -1,4 +1,8 @@
 #define INTERAKTYWNA 1
+#define EXIT_SUCCESS 0
+#define EXIT_EXTERNAL_ERROR 2
+#define EXIT_PROGRAM_ERROR 3
+#define EXIT_NO_MOVE 1
 #define TEAM_NAME "marcel"
 
 typedef struct {
@@ -15,8 +19,14 @@ typedef struct {
 typedef struct {
     int potencjal;
     int max_ryb;
+    int ileRyb;
     Wspolrzedne_pola pole;
 } analizator_pingwinow;
+
+typedef enum  {
+    PO_LICZBIE_RYB,
+    PO_PRIORYTECIE
+}typ_szukania;
 
 typedef enum p{
     placement = 0, movement = 1

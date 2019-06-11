@@ -212,6 +212,10 @@ int get_params(int argc, char **argv, GameParameters *params)
     return 0;
 }
 
+void print_pole(Wspolrzedne_pola pole, char title[20])
+{
+    printf("%s: (%d, %d)\t", title, pole.row, pole.column);
+}
 /**
  * ustawia pingwina na zadanym polu
  * zwraca 
@@ -225,7 +229,7 @@ int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
     if(params.penguins <= *plansza->nasza_ilosc_ryb)
     {
         printf("nie mam juz zadnych pingwinow do rozlozenia\n");
-        return 1;
+        return EXIT_NO_MOVE;
     }
     if(plansza->pole[x][y].nrGracza!=0 || plansza->pole[x][y].ileRyb!=1)
     {
@@ -237,7 +241,7 @@ int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
         *(plansza->nasza_ilosc_ryb) += plansza->pole[x][y].ileRyb;
         plansza->pole[x][y].ileRyb=0;
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 /**
  *zwraca
@@ -245,99 +249,7 @@ int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
  *  1->nie mozna tam isc
  * 
 */ 
-int move_penguins(Plansza *plansza, GameParameters params, Wspolrzedne_pola pingwin, Wspolrzedne_pola ruch)
-{ 
-    int x = pingwin.row;
-    int y = pingwin.column;
-    int z = ruch.row;
-    int t = ruch.column;
-    assert(params.phase == movement);
-    if(x == z && y>=t)
-    {
-        for(int i=1; i<=y-t; i++)
-        {
-            if(y-i<0)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-            if(plansza->pole[x][y-i].ileRyb==0 || plansza->pole[x][y-i].nrGracza!=0 || y-i<0)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-        }
-        plansza->pole[x][t].nrGracza=plansza->nasz_nr;
-        plansza->pole[x][y].nrGracza=0;
-        *(plansza->nasza_ilosc_ryb) += plansza->pole[x][t].ileRyb;
-        plansza->pole[x][t].ileRyb=0;
-        return 0;
-    }
-    else if(x==z && y<=t)
-    {
-        for(int i=1; i<=t-y; i++)
-        {
-            if(y+i>=plansza->n_cols-1)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-            if(plansza->pole[x][y+i].ileRyb==0 || plansza->pole[x][y+i].nrGracza!=0)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-        }
-        plansza->pole[x][t].nrGracza=plansza->nasz_nr;
-        plansza->pole[x][y].nrGracza=0;
-        *(plansza->nasza_ilosc_ryb) += plansza->pole[x][t].ileRyb;
-        plansza->pole[x][t].ileRyb=0;
-        return 0;
-    }
-    else if(z<=x && y==t)
-    {
-        for(int i=1; i<=x-z; i++)
-        {
-            if(x-i<0)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-            if(plansza->pole[x-i][y].ileRyb==0 || plansza->pole[x-i][y].nrGracza!=0 || x-i<0)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-        }
-        plansza->pole[z][y].nrGracza=plansza->nasz_nr;
-        plansza->pole[x][y].nrGracza=0;
-        *(plansza->nasza_ilosc_ryb) += plansza->pole[z][y].ileRyb;
-        plansza->pole[z][y].ileRyb=0;
-        return 0;
-    }
-    else if(z>=x && y==t)
-    {
-        for(int i=1; i<=z-x; i++)
-        {
-            if(x+i>plansza->n_rows)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-            if(plansza->pole[x+i][y].ileRyb==0 || plansza->pole[x+i][y].nrGracza!=0 || x+i>plansza->n_rows)
-            {
-                printf("Nie mozesz przejsc na to pole! Rusz sie inaczej.\n");
-                return 1;
-            }
-        }
-        plansza->pole[z][y].nrGracza=plansza->nasz_nr;
-        plansza->pole[x][y].nrGracza=0;
-        *(plansza->nasza_ilosc_ryb) += plansza->pole[z][y].ileRyb;
-        plansza->pole[z][y].ileRyb=0;
-        return 0;
-    }
-    return 1;
-}
+
 int znajdz_nasze_pingwiny(Plansza *plansza, GameParameters params)
 {
     printf("znajdywanie naszych pingwinow: ...\t");
@@ -356,17 +268,46 @@ int znajdz_nasze_pingwiny(Plansza *plansza, GameParameters params)
             }
         }
     }
-    assert(i == params.penguins);
-    printf("ok\n");
-    return 0;
+    if(i != params.penguins)
+        return EXIT_EXTERNAL_ERROR;
+    printf("ok\n\n");
+    return EXIT_SUCCESS;
+}
+void print_pingwiny(Plansza *plansza, GameParameters params)
+{
+    assert(params.phase == movement);
+    printf("Nasze pingwiny: ");
+    for(int i=0; i<params.penguins; i++)
+    {
+        print_pole(plansza->nasze_pingwiny[i], " ");
+    }
+    printf("\n\n");
+}
+int rusz_pingwinem(Plansza *plansza, GameParameters params, Wspolrzedne_pola pingwin, Wspolrzedne_pola ruch)
+{
+    printf("ruch pingwinem ...\t");
+    assert(plansza->pole[pingwin.row][pingwin.column].ileRyb == 0); //czy pole pingwina jest poprawne
+    assert(plansza->pole[pingwin.row][pingwin.column].nrGracza == plansza->nasz_nr); //czy pingwin jest nasz
+    assert(plansza->pole[ruch.row][ruch.column].nrGracza == 0);  //czy ruch jest na pewno mozliwy
+
+    int zebrane_ryby = 0;
+    plansza->pole[pingwin.row][pingwin.column].nrGracza = 0;
+    plansza->pole[ruch.row][ruch.column].nrGracza = plansza->nasz_nr;
+
+    zebrane_ryby = plansza->pole[ruch.row][ruch.column].ileRyb;
+    plansza->pole[ruch.row][ruch.column].ileRyb = 0;
+    plansza->players_stats[plansza->nasz_nr - 1].n_ryb += zebrane_ryby;
+    printf("ok zebrano %d ryb\n", zebrane_ryby);
+    return EXIT_SUCCESS;
 }
 
 analizator_pingwinow analyze_point(Plansza *plansza, Wspolrzedne_pola punkt)
 {
-    int potencjal_pingwina = 0;
-    int max_ryb = 0;
+    int potencjal_pingwina = -1;
+    int max_ryb = -1;
     analizator_pingwinow pingwin_rozszerzony;
     pingwin_rozszerzony.pole = punkt;
+    pingwin_rozszerzony.ileRyb = plansza->pole[punkt.row][punkt.column].ileRyb;
        // printf("pingwin: (%d, %d)\n", pingwin.row, pingwin.column);
         //idziemy w góre(dekrementacja r)
         // r -> rząd w którym się znajdujemy
@@ -428,76 +369,172 @@ analizator_pingwinow analyze_point(Plansza *plansza, Wspolrzedne_pola punkt)
 /**
  * zwraca tablice analizator o dlugosci n_points
  */ 
-analizator_pingwinow* analize(Plansza *plansza, Wspolrzedne_pola *punkty, int n_points)
+analizator_pingwinow* analize_array_of_points(Plansza *plansza, Wspolrzedne_pola *punkty, int n_points)
 {
     analizator_pingwinow *analizator = malloc(sizeof(analizator_pingwinow) * n_points);
     for(int i=0; i<n_points; i++)
     {
         analizator[i] = analyze_point(plansza, punkty[i]);
-     //   printf("\tpotencjalPingwina: %d\n", potencjal_pingwina);
     }
-    return analizator;
+    int max_prior = -1;
+    int max_ryb = -1;
+    for(int i=0; i<n_points; i++)
+    {
+     //   printf("pot: %d max_ryb: %d ileRyb: %d",analizator[i].potencjal, analizator[i].max_ryb, analizator[i].ileRyb);
+      //  print_pole(analizator[i].pole, " pole");
+        if(analizator[i].max_ryb > max_ryb || analizator[i].potencjal > max_prior)
+        {
+            max_prior = 1;
+            max_ryb = 1;
+        }
+    }
+    if(max_prior < 0 && max_ryb < 0)
+        return NULL;
+    else
+        return analizator;
 }
-Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters params)
+Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters params, typ_szukania szukanie)
 {
     int n_penguins = params.penguins;
-    analizator_pingwinow *analizator =  analize(plansza, plansza->nasze_pingwiny, n_penguins);
-    int pingwin_max_ryb = 0;
-    int pingwin_max_prior = 0;
+    analizator_pingwinow *analizator =  analize_array_of_points(plansza, plansza->nasze_pingwiny, n_penguins);
+    if(analizator == NULL)
+    {
+        Wspolrzedne_pola error = {-1, -1};
+        return error;
+    }
+    int max_ryb = -1;
+    int max_prior = -1;
     Wspolrzedne_pola pole_max_ryb;
     Wspolrzedne_pola pole_max_prior;
     for(int i=0; i<n_penguins; i++)
     {
-        if(analizator[i].max_ryb > pingwin_max_ryb)
+        if(analizator[i].max_ryb > max_ryb)
         {
-            pingwin_max_ryb = analizator[i].max_ryb;
+            max_ryb = analizator[i].max_ryb;
             pole_max_ryb = analizator[i].pole;
         }
-        if(analizator[i].potencjal > pingwin_max_prior)
+        if(analizator[i].potencjal > max_prior)
         {
-            pingwin_max_prior = analizator[i].potencjal;
+            max_prior = analizator[i].potencjal;
             pole_max_prior = analizator[i].pole;
         }
-        printf("potencjal: %d, wspolrzedne: (%d, %d)\n", analizator[i].potencjal, \
-                analizator[i].pole.row, analizator[i].pole.column);
+     //   printf("potencjal: %d, wspolrzedne: (%d, %d)\n", analizator[i].potencjal, 
+      //          analizator[i].pole.row, analizator[i].pole.column);
     }
-    printf("pole z max potencjal: (%d, %d) \n", pole_max_prior.row, pole_max_prior.column);
-    return pole_max_prior;
+ //   printf("pol z max ryb: (%d, %d)\n", pole_max_prior.row, pole_max_ryb.column);
+  //  printf("pole z max potencjal: (%d, %d) \n", pole_max_prior.row, pole_max_prior.column);
+    if(szukanie == PO_LICZBIE_RYB)    
+        return pole_max_ryb;
+    else
+        return pole_max_prior;
 }
 Wspolrzedne_pola znajdz_najlepszy_ruch(Plansza *plansza, GameParameters params, Wspolrzedne_pola pingwin)
 {
-
-    Wspolrzedne_pola mozliwe_ruchy[plansza->n_cols + plansza->n_rows];
-    int max_ryb = -1;
-    for(int r=pingwin.row; r>=0; r++)
+    print_pole(pingwin, "wybrany pingwin");
+    analizator_pingwinow mozliwe_ruchy[plansza->n_cols + plansza->n_rows];
+    int counter = 0;
+    Wspolrzedne_pola pole;
+    // lecimy w góre
+    for(int r=pingwin.row-1; r>=0; r--)
     {
-
+        pole.row = r;
+        pole.column = pingwin.column;
+        if(plansza->pole[r][pingwin.column].nrGracza != 0)
+            break;
+        mozliwe_ruchy[counter++] = analyze_point(plansza, pole);
     }
-    return pingwin;
+    // lecimy w dół
+    for(int r=pingwin.row+1; r<plansza->n_rows; r++)
+    {
+        pole.row = r;
+        pole.column = pingwin.column;
+        if(plansza->pole[r][pingwin.column].nrGracza != 0)
+            break;
+        mozliwe_ruchy[counter++] = analyze_point(plansza, pole);;
+    }
+    //lecimy w lewo
+    for(int c=pingwin.column-1; c>=0; c--)
+    {
+        pole.row = pingwin.row;
+        pole.column = c;
+        if(plansza->pole[pingwin.row][c].nrGracza != 0)
+            break;
+        mozliwe_ruchy[counter++] = analyze_point(plansza, pole);
+    } 
+    //lecimy w prawo
+    for(int c=pingwin.column+1; c<plansza->n_cols; c++)
+    {
+        pole.row = pingwin.row;
+        pole.column = c;
+        if(plansza->pole[pingwin.row][c].nrGracza != 0)
+            break;
+        mozliwe_ruchy[counter++] = analyze_point(plansza, pole);
+    } 
+
+  //  printf("\nmozliwe ruchy: %d\n", counter);
+    analizator_pingwinow pola_max_ryb[counter]; //maksymalna ilosc pól to counter, bo tyle jest mozliwych ruchow
+    int max_ryb = 0;
+    int counter_max_ryb = 0;    // tyle jest pól z maksymalną ilością ryb
+    for(int i=0; i<counter; i++)
+    {
+     //   print_pole(mozliwe_ruchy[i].pole, "mozliwy ruch");
+        if(mozliwe_ruchy[i].ileRyb > max_ryb)
+            max_ryb = mozliwe_ruchy[i].ileRyb;
+    }
+ //   printf("max ryb: %d\n", max_ryb);
+    //znalezlismy max ryb, counter->ilosc mozliwych ruchow
+    for(int i=0; i<counter; i++)
+    {
+        if(mozliwe_ruchy[i].ileRyb == max_ryb)
+        {
+            pola_max_ryb[counter_max_ryb++] = mozliwe_ruchy[i];
+        //    print_pole(mozliwe_ruchy[i].pole, "pole max ryb znalezione");
+        }
+    } 
+    assert(counter_max_ryb != 0);   //gdzies musi byc wartosc max wiec counter >0
+    // po wyjsciu z petli mamy counter_max_ryb pól z maksymalną ilością ryb
+    if(counter_max_ryb == 1)
+        return pola_max_ryb[0].pole; // jesli wsrod mozliwych pol jest tylko 1 pole z max ryb
+    
+ //   printf("counter_max_ryb: %d\n", counter_max_ryb);
+    // jest counter_max_ryb pól z max iloscią ryb
+    int max_potencjal = 0;
+    int idx_max_potencjal = -1; //index pola_max_ryb, dla którego pole ma najwiekszy potencjal
+    for(int i=0; i<counter_max_ryb; i++)
+    {   // i-> index pola_max_ryb
+ //       print_pole(pola_max_ryb[i].pole, "pole_max_ryb");
+        if(pola_max_ryb[i].potencjal > max_potencjal)
+        {
+            max_potencjal = pola_max_ryb[i].potencjal;
+            idx_max_potencjal = i;
+        }
+    }
+    return pola_max_ryb[idx_max_potencjal].pole;
 }
 void exit_program(int exit_code)
 {
-    if(exit_code == 3)
+    printf("\n\t\t***");
+    if(exit_code == EXIT_PROGRAM_ERROR)
     {
-        printf("blad wewnetrzny programu\n");
+        printf("blad wewnetrzny programu");
     }
-    else if(exit_code == 2)
+    else if(exit_code == EXIT_EXTERNAL_ERROR)
     {
-        printf("blad danych wejsciowych\n");
+        printf("blad danych wejsciowych");
     }
-    else if(exit_code == 1)
+    else if(exit_code == EXIT_NO_MOVE)
     {
-        printf("nie moge wykonac ruchu, ale wszystko jest OK\n");
+        printf("nie moge wykonac ruchu, ale wszystko jest OK");
     }
-    else if(exit_code == 0)
+    else if(exit_code == EXIT_SUCCESS)
     {
-        printf("wszystko ok\n");
+        printf("wszystko ok");
     }
     else
     {
         printf("nieznany kod\n");
     }
-    
+    printf("***\n\n");
 }
 
 int main(int argc, char **argv)
@@ -555,29 +592,27 @@ int main(int argc, char **argv)
                 fclose(fp_in);
                 return exit_code;
             }
-            print_game_info(plansza, params);
-            znajdz_nasze_pingwiny(&plansza, params);
-            Wspolrzedne_pola ruch = znajdz_najlepszy_ruch(&plansza, params, znajdz_najlepszego_pingwina(&plansza, params));
-            printf("\n\n\t***PINGWIN WYBRANY: (%d, %d)\n", ruch.row, ruch.column);
-            /*
-            for(int i=0; i<params.penguins; i++)
-                printf("(x,y) : (%d,%d)\n", \
-                plansza.nasze_pingwiny[i].row, plansza.nasze_pingwiny[i].column);
-            int x, y, t;
-            t = rand()%params.penguins; //losuj nr naszego pingwina
-            Wspolrzedne_pola nasz_pingwin = plansza.nasze_pingwiny[t];
-            Wspolrzedne_pola ruch;
-            for(exit_code=1; exit_code != 0;)
-            {
-                x = rand()%plansza.n_rows;
-                y = rand()%plansza.n_cols;
-                ruch.row = x;
-                ruch.column = y;
-                exit_code = move_penguins(&plansza, params, nasz_pingwin, ruch);
-                if(exit_code==0)
-                    printf("pingwin ruszony\n");
+        //    print_game_info(plansza, params);
+            exit_code = znajdz_nasze_pingwiny(&plansza, params);
+            if(exit_code != EXIT_SUCCESS)
+            {   // blad liczby pingwinow // ktos nam zarąbał, lub zle podal do programu
+                exit_program(exit_code);
+                clear_memory(&plansza);
+                fclose(fp_in);
+                return exit_code;
             }
-            */
+            print_pingwiny(&plansza, params);
+            Wspolrzedne_pola pingwin = znajdz_najlepszego_pingwina(&plansza, params, PO_LICZBIE_RYB);
+            if(pingwin.row < 0 || pingwin.column <0)
+            {   //nie ma juz gdzie isc
+                exit_program(EXIT_NO_MOVE);
+                clear_memory(&plansza);
+                fclose(fp_in);
+                return EXIT_NO_MOVE;
+            }
+            Wspolrzedne_pola ruch = znajdz_najlepszy_ruch(&plansza, params, pingwin);
+            printf("\n\n\t***PINGWIN (%d, %d) RUSZA NA: (%d, %d)\n", pingwin.row, pingwin.column, ruch.row, ruch.column);
+            exit_code = rusz_pingwinem(&plansza, params, pingwin, ruch);
         } break;
 
     }

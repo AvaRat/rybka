@@ -1,9 +1,9 @@
-CFLAGS = -Wall # tutaj można dodawać inne flagi kompilatora
+CFLAGS = -Wall -pedantic -std=c11 # tutaj można dodawać inne flagi kompilatora
 LIBS = -lm # tutaj można dodawać biblioteki
-PHASE=placement
+PHASE=movement
 INPUTBOARDFILE=board01.txt
 OUTPUTBOARDFILE=board01.txt
-PENGUINS=3
+PENGUINS=5
 
 OBJ =\
   rybka_bot.o

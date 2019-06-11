@@ -286,6 +286,8 @@ void print_pingwiny(Plansza *plansza, GameParameters params)
 int rusz_pingwinem(Plansza *plansza, GameParameters params, Wspolrzedne_pola pingwin, Wspolrzedne_pola ruch)
 {
     printf("ruch pingwinem ...\t");
+    assert(ruch.row < plansza->n_rows);
+    assert(ruch.column < plansza->n_cols);
     assert(plansza->pole[pingwin.row][pingwin.column].ileRyb == 0); //czy pole pingwina jest poprawne
     assert(plansza->pole[pingwin.row][pingwin.column].nrGracza == plansza->nasz_nr); //czy pingwin jest nasz
     assert(plansza->pole[ruch.row][ruch.column].nrGracza == 0);  //czy ruch jest na pewno mozliwy
@@ -303,7 +305,7 @@ int rusz_pingwinem(Plansza *plansza, GameParameters params, Wspolrzedne_pola pin
 
 analizator_pingwinow analyze_point(Plansza *plansza, Wspolrzedne_pola punkt)
 {
-    int potencjal_pingwina = -1;
+    int potencjal_pingwina = 0;
     int max_ryb = -1;
     analizator_pingwinow pingwin_rozszerzony;
     pingwin_rozszerzony.pole = punkt;
@@ -386,6 +388,13 @@ Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters pa
     int max_prior = -1;
     Wspolrzedne_pola pole_max_ryb = {-1, -1};
     Wspolrzedne_pola pole_max_prior = {-1, -1};
+  /*  printf("max_ryb, potencjal:\t");
+    for(int i=0; i<n_penguins; i++)
+    {
+        printf("%d, %d\t\t", analizator[i].max_ryb, analizator[i].potencjal);
+    }
+    printf("\n");
+    */
     for(int i=0; i<n_penguins; i++)
     {
         if(analizator[i].max_ryb > max_ryb)
@@ -401,8 +410,8 @@ Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters pa
      //   printf("potencjal: %d, wspolrzedne: (%d, %d)\n", analizator[i].potencjal, 
       //          analizator[i].pole.row, analizator[i].pole.column);
     }
-    printf("max potencjal: %d\nmax_n_ryb: %d\n", max_prior, max_ryb);
-    if(max_prior == -1)
+  //  printf("max potencjal: %d\nmax_n_ryb: %d\n", max_prior, max_ryb);
+    if(max_prior <= 0)
     {
         Wspolrzedne_pola error = {-1, -1};
         return error;
@@ -417,6 +426,7 @@ Wspolrzedne_pola znajdz_najlepszego_pingwina(Plansza *plansza, GameParameters pa
 Wspolrzedne_pola znajdz_najlepszy_ruch(Plansza *plansza, GameParameters params, Wspolrzedne_pola pingwin)
 {
     print_pole(pingwin, "wybrany pingwin");
+    printf("znajdowanie najlepszego ruchu ...\t");
     analizator_pingwinow mozliwe_ruchy[plansza->n_cols + plansza->n_rows];
     int counter = 0;
     Wspolrzedne_pola pole;
@@ -457,17 +467,18 @@ Wspolrzedne_pola znajdz_najlepszy_ruch(Plansza *plansza, GameParameters params, 
         mozliwe_ruchy[counter++] = analyze_point(plansza, pole);
     } 
 
-  //  printf("\nmozliwe ruchy: %d\n", counter);
+    //printf("\nmozliwe ruchy: %d\n", counter);
     analizator_pingwinow pola_max_ryb[counter]; //maksymalna ilosc pól to counter, bo tyle jest mozliwych ruchow
-    int max_ryb = 0;
+    int max_ryb = -1;
     int counter_max_ryb = 0;    // tyle jest pól z maksymalną ilością ryb
+   // printf("mozliwe ruchy: ");
     for(int i=0; i<counter; i++)
     {
-     //   print_pole(mozliwe_ruchy[i].pole, "mozliwy ruch");
+      //  print_pole(mozliwe_ruchy[i].pole, " ");
         if(mozliwe_ruchy[i].ileRyb > max_ryb)
             max_ryb = mozliwe_ruchy[i].ileRyb;
     }
- //   printf("max ryb: %d\n", max_ryb);
+   // printf("max ryb: %d\n", max_ryb);
     //znalezlismy max ryb, counter->ilosc mozliwych ruchow
     for(int i=0; i<counter; i++)
     {
@@ -480,21 +491,28 @@ Wspolrzedne_pola znajdz_najlepszy_ruch(Plansza *plansza, GameParameters params, 
     assert(counter_max_ryb != 0);   //gdzies musi byc wartosc max wiec counter >0
     // po wyjsciu z petli mamy counter_max_ryb pól z maksymalną ilością ryb
     if(counter_max_ryb == 1)
+    {
+        printf("obojetnie ktory\tok\n");
         return pola_max_ryb[0].pole; // jesli wsrod mozliwych pol jest tylko 1 pole z max ryb
+    }
     
  //   printf("counter_max_ryb: %d\n", counter_max_ryb);
     // jest counter_max_ryb pól z max iloscią ryb
     int max_potencjal = 0;
-    int idx_max_potencjal = -1; //index pola_max_ryb, dla którego pole ma najwiekszy potencjal
+    int idx_max_potencjal = 0; //index pola_max_ryb, dla którego pole ma najwiekszy potencjal
     for(int i=0; i<counter_max_ryb; i++)
     {   // i-> index pola_max_ryb
- //       print_pole(pola_max_ryb[i].pole, "pole_max_ryb");
+      //  print_pole(pola_max_ryb[i].pole, "pole_max_ryb");
+        // BŁĄD(RUSZ_NA (434324324, 0) )-> do tego momentu wszytko jest OK
+       // printf("pola_max_ryb[%d].potencjal: %d\n", i, pola_max_ryb[i].potencjal);
         if(pola_max_ryb[i].potencjal > max_potencjal)
         {
             max_potencjal = pola_max_ryb[i].potencjal;
             idx_max_potencjal = i;
         }
     }
+   // printf("idx_max_potencjal: %d\n", idx_max_potencjal);
+   printf("ok\n");
     return pola_max_ryb[idx_max_potencjal].pole;
 }
 void exit_program(int exit_code)
@@ -587,7 +605,7 @@ int main(int argc, char **argv)
                 fclose(fp_in);
                 return exit_code;
             }
-            print_pingwiny(&plansza, params);
+           // print_pingwiny(&plansza, params);
             Wspolrzedne_pola pingwin = znajdz_najlepszego_pingwina(&plansza, params, PO_LICZBIE_RYB);
             if(pingwin.row < 0 || pingwin.column <0)
             {   //nie ma juz gdzie isc

@@ -8,15 +8,34 @@
 
 #include "templates.h"
 
-void clear_memory(Plansza *plansza)
+
+void print_pole(Wspolrzedne_pola pole, char title[20])
 {
-    printf("czyszczenie pamieci i zamykanie plikow\n");
-    for(int i=0; i<plansza->n_rows; i++)
+    printf("%s: (%d, %d)\t", title, pole.row, pole.column);
+}
+void print_pingwiny(Plansza *plansza, GameParameters params)
+{
+    assert(params.phase == movement);
+    printf("Nasze pingwiny: ");
+    for(int i=0; i<params.penguins; i++)
     {
+        print_pole(plansza->nasze_pingwiny[i], " ");
+    }
+    printf("\n\n");
+}
+void clear_memory(Plansza *plansza, GameParameters params)
+{
+    printf("czyszczenie pamieci\n");
+    for(int i=0; i < plansza->n_rows; i++)
+    {
+    //    printf("%p ", plansza->pole[i]);
         free(plansza->pole[i]);
     }
+ //   printf("\n%p\n", plansza->pole);
     free(plansza->pole);
+  //  print_pingwiny(plansza, params);
     free(plansza->nasze_pingwiny);
+
 }
 void print_game_info(Plansza plansza, GameParameters params)
 {
@@ -41,6 +60,7 @@ void print_game_info(Plansza plansza, GameParameters params)
         printf("\n");
     }
 }
+
 int read_file(FILE *fp_in, Plansza *plansza, GameParameters *params)
 {
     int n_rows, n_cols;
@@ -143,80 +163,72 @@ int save_to_file(FILE *fp_in, FILE *fp_out, Plansza *plansza, GameParameters par
     printf("ok\n");
     return 0;
 }
+
 int split(char *arg, char *value)
 {
     if(!arg)
         return -1;
 
-    char ch;
+    char ch =0;
     int len = 0;
     int loc = 0;
-    for(len=0, ch=arg[0]; ch != '\0'; ch=arg[len++])
+    for(len=0, ch=arg[0]; ch != '\0'; ch=arg[++len])
     {
+      //  printf("%c\t", ch);
         if(ch == '\0')
             return -1;
         if(ch == '=')
-            loc = len;
+            loc = len+1;
     }
+ // printf("\n");
     if(loc == 0)
         return -1;
     for(int n=0; n<len; n++)
         value[n] = arg[n+loc];
-    arg[loc-1] = '\0';
+    arg[loc] = '\0';
     return 0;
 }
+
 int get_params(int argc, char **argv, GameParameters *params)
 {
-    phase_type phase;
-    int penguins = 0;
-    char inputboardfile[40];
-    char outputboardfile[40];
-    if(argc != 5)
+    
+    char value[20];
+    int error_code = 0;
+    error_code = split(argv[1], value);
+ //   printf("argv[1]: '%s'\n", value);
+    if(!strcmp(value, "placement"))
     {
-        printf("brak danych wejsciowychn");
+        params->phase = placement;
+    }else
+    {
+        //    printf(" movement ->%s\n", argv[1]);
+            params->phase = movement;
     }
+    if(params->phase == placement)
+    {
+        split(argv[2], value);
+       // printf("value[0] = %c\n", value[0]);
+        params->penguins = value[0] - '0';
 
-    for(int i=1; i<argc; i++)
+      //  printf("argv[3]: '%s'\n", argv[3]);
+        strcpy(params->inputboardfile, argv[3]);
+      //  printf("argv[4]: '%s'\n", argv[4]);
+        strcpy(params->outputboardfile, argv[4]);
+    }else
     {
-        char *arg = argv[i];
-        char value[40];
-        if(split(arg, value) != 0)
-        {
-            printf("error in split function\n");
-            return 3;
-        }
-        if(!strcmp(arg, "phase"))
-        {
-            if(!strcmp(value, "placement"))
-                phase = placement;
-            else
-                phase = movement;
-        }
-        else if(!strcmp(arg, "penguins"))
-        {
-            sscanf(value, "%d", &penguins);
-        }
-        else if(!strcmp(arg, "inputboardfile"))
-            strcpy(inputboardfile,value);
-        else if(!strcmp(arg, "outputboardfile"))
-            strcpy(outputboardfile, value);
-        else
-        {
-            printf("wrong arguments!!\n");
-            return -2;
-        }
+     //   printf("%s, %s\n", argv[2], argv[3]);
+        strcpy(params->inputboardfile, argv[2]);
+        strcpy(params->outputboardfile, argv[3]);
     }
-    strcpy(params->inputboardfile, inputboardfile);
-    strcpy(params->outputboardfile, outputboardfile);
-    params->penguins = penguins;
-    params->phase = phase;
+ /*   
+    printf("penguins: %d  ", params->penguins);
+    printf("phase: %d\n" , params->phase);
+    printf("%s\n", params->inputboardfile);
+    printf("%s\n", params->outputboardfile);
+    */
     return 0;
 }
 
-void print_pole(Wspolrzedne_pola pole, char title[20])
-{
-    printf("%s: (%d, %d)\t", title, pole.row, pole.column);
-}
 /**
  * ustawia pingwina na zadanym polu
  * zwraca 
@@ -251,13 +263,14 @@ int ustaw_pingwina(Plansza *plansza, GameParameters params, int x, int y)
  * 
 */ 
 
-int znajdz_nasze_pingwiny(Plansza *plansza, GameParameters params)
+int znajdz_nasze_pingwiny(Plansza *plansza, GameParameters *params)
 {
     printf("znajdywanie naszych pingwinow: ...\t");
-    assert(params.phase==movement && plansza != NULL);
+    assert(params->phase==movement && plansza != NULL);
     
     int i=0;
-    plansza->nasze_pingwiny = malloc(sizeof(Wspolrzedne_pola) *params.penguins);
+    int penguins_counter = 0;
+    plansza->nasze_pingwiny = malloc(sizeof(Wspolrzedne_pola) *10);
     for(int r=0; r<plansza->n_rows; r++)
     {
         for(int c=0; c<plansza->n_cols; c++)
@@ -266,23 +279,15 @@ int znajdz_nasze_pingwiny(Plansza *plansza, GameParameters params)
             {
                 plansza->nasze_pingwiny[i].row = r;
                 plansza->nasze_pingwiny[i++].column = c;
+                penguins_counter++;
             }
         }
     }
-    if(i != params.penguins)
+    params->penguins = penguins_counter;
+    if(i != params->penguins)
         return EXIT_EXTERNAL_ERROR;
-    printf("ok\n\n");
+    printf("ok znaleziono %d pingwinow\n\n", params->penguins);
     return EXIT_SUCCESS;
-}
-void print_pingwiny(Plansza *plansza, GameParameters params)
-{
-    assert(params.phase == movement);
-    printf("Nasze pingwiny: ");
-    for(int i=0; i<params.penguins; i++)
-    {
-        print_pole(plansza->nasze_pingwiny[i], " ");
-    }
-    printf("\n\n");
 }
 int rusz_pingwinem(Plansza *plansza, GameParameters params, Wspolrzedne_pola pingwin, Wspolrzedne_pola ruch)
 {
@@ -565,7 +570,7 @@ int main(int argc, char **argv)
             if(exit_code != 0)
             {
                 exit_program(exit_code);
-                clear_memory(&plansza);
+                clear_memory(&plansza, params);
                 fclose(fp_in);
                 return exit_code;
             }
@@ -584,8 +589,6 @@ int main(int argc, char **argv)
                 else if(exit_code==0)
                     printf("pingwin ustawiony\n");
             }
-          //  
-            //
         } break;
 
         case movement:
@@ -594,25 +597,26 @@ int main(int argc, char **argv)
             if(exit_code != 0)
             {
                 exit_program(exit_code);
-                clear_memory(&plansza);
+                clear_memory(&plansza, params);
                 fclose(fp_in);
                 return exit_code;
             }
         //    print_game_info(plansza, params);
-            exit_code = znajdz_nasze_pingwiny(&plansza, params);
+            exit_code = znajdz_nasze_pingwiny(&plansza, &params);
             if(exit_code != EXIT_SUCCESS)
             {   // blad liczby pingwinow // ktos nam zarąbał, lub zle podal do programu
                 exit_program(exit_code);
-                clear_memory(&plansza);
+                clear_memory(&plansza, params);
                 fclose(fp_in);
                 return exit_code;
             }
-           // print_pingwiny(&plansza, params);
+            print_pingwiny(&plansza, params);
             Wspolrzedne_pola pingwin = znajdz_najlepszego_pingwina(&plansza, params, PO_LICZBIE_RYB);
             if(pingwin.row < 0 || pingwin.column <0)
             {   //nie ma juz gdzie isc
+                printf("tuttaj\n");
                 exit_program(EXIT_NO_MOVE);
-                clear_memory(&plansza);
+                clear_memory(&plansza, params);
                 fclose(fp_in);
                 return EXIT_NO_MOVE;
             }
@@ -626,7 +630,7 @@ int main(int argc, char **argv)
     save_to_file(fp_in, fp_out, &plansza, params);
     fclose(fp_in);
     fclose(fp_out);
-    clear_memory(&plansza);
+    clear_memory(&plansza, params);
     printf("\n\texit_code: %d\n", exit_code);
     return exit_code;
 }

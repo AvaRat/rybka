@@ -47,12 +47,12 @@ typedef struct game_params {
 }GameParameters;
 
 typedef struct {
-    POLE **pole;
     int n_rows;
     int n_cols;
     int nasz_nr;
     Wspolrzedne_pola *nasze_pingwiny;
     int *nasza_ilosc_ryb;   // wskaznik na naszego gracza w strukturze player_stats
     players_stats_type players_stats[9];
+    POLE **pole;
 } Plansza;
 

@@ -1,10 +1,10 @@
 CFLAGS = -Wall -pedantic -std=c11 # tutaj można dodawać inne flagi kompilatora
 LIBS = -lm # tutaj można dodawać biblioteki
-PHASE=movement
+PHASE=placement
 INPUTBOARDFILE=board01.txt
 OUTPUTBOARDFILE=board01.txt
 PENGUINS=5
-
+# penguins=$(PENGUINS)
 OBJ =\
   rybka_bot.o
 all: rybka_bot
@@ -18,4 +18,4 @@ main: $(OBJ)
 	$(CC) $(OBJ) $(LIBS) -o test
 
 run:
-	./rybka_bot phase=$(PHASE) penguins=$(PENGUINS) inputboardfile=$(INPUTBOARDFILE) outputboardfile=$(OUTPUTBOARDFILE)
+	./rybka_bot phase=$(PHASE) penguins=$(PENGUINS) $(INPUTBOARDFILE) $(OUTPUTBOARDFILE)
